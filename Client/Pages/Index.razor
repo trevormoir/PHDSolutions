@@ -1,0 +1,44 @@
+﻿@page "/"
+
+<PageTitle>PHD Solutions</PageTitle>
+
+<h1>Hello, welcome to PHD Solutions Report Portal</h1>
+
+<h2>Database Application Challenge</h2>
+<p>This test is not designed to evaluate skills in any particular language.  You are free to write both parts in any programming language of your choice (they may even be two different languages).  The exception to this is the use of XML/DOM and SQL to load and store data.  You are free to use any required reference material including the internet.</p>
+<div>
+    <h3>Part 1 – Setup</h3>
+    Create a new database on an SQL Server of your choice. You can use the freely available Express edition or even local Db if desired. Create a new Database and execute the tableCreationScript.sql (found in the SQL Directory) to gener
+    ate the tables and supporting data.
+</div>
+<div>
+    <h3>Part 2 - Database Loader</h3>
+    Using the language of your choice, develop an application to load a series of XML files into a database.  These XML files represent a fictional set of purchase orders each containing a list of parts, quantity, cost, reference to the purchaser and a project number.
+</div>
+<div>
+    <h3>XML Files</h3>
+    PO_Data\*.xml
+</div>
+<div>
+    <h3>Database Table</h3>
+    <em>purchaseRecord</em> - This table will have already been created has already been created in the database. Load and store all information from the XML files to this table.
+</div>
+
+<p>
+    Using a language of your choice, create an application to generate a report listing all purchases for any given project in the database.  This report may be presented on a web page, in a desktop application or in console output.</p>
+
+<p>The report should list the following:
+    <ul>
+        <li>Project Title (from projectRecord).</li>
+        <li>All users that have made purchases on the project.</li>
+        <li>A list of all parts purchased on the project along with descriptions, total quantities and costs.</li>
+        <li>The total cost of all purchases on the project.</li>
+    </ul>
+</p>
+<div>
+    <h3>Pre-Existing Tables</h3>
+    <p><strong><em>PurchaseRecord</em></strong> - Table created in part one.</p>
+    <p><strong><em>ProjectRecord</em></strong> - Use to relate project numbers to project descriptions.</p>
+    <p><strong><em>MaterialMaster</em></strong> - Use to relate material numbers to descriptions.</p>
+    <p><strong><em>Users</em></strong> - Relate userIDs to user Names.</p>
+</div>

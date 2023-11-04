@@ -1,0 +1,119 @@
+﻿@page "/import"
+@using System.Xml;
+@using System.Xml.Linq;
+@inject NavigationManager navigationManager
+@inject IPurchaseItemService purchaseItemService
+
+<h3>Import</h3>
+<label>Upload XML File</label>
+<InputFile id="xmlfile" OnChange="@LoadFile" multiple accept=".xml"></InputFile>
+
+@*@if (isLoading)
+{
+    <p>Uploading...</p>
+}
+else
+{*@
+    <ul>
+        @foreach (var file in loadedFiles)
+        {
+            <li>
+                <ul>
+                    <li>Name: @file.Name</li>
+                    <li>Last modified: @file.LastModified.ToString()</li>
+                    <li>Size (bytes): @file.Size</li>
+                    <li>Content type: @file.ContentType</li>
+                    <li>@loadedXml[counter]</li>
+                </ul>
+            </li>
+            counter++;
+        }
+    </ul>
+@*}*@
+
+<div>@((MarkupString)content)</div>
+
+@code {
+    //async Task LoadFile(InputFileChangeEventArgs e)
+    //{
+    //    XmlDocument doc = new XmlDocument();
+    //    doc.Load(e.File);
+    //    string xmlcontents = doc.InnerXml;
+    //}
+
+    private List<IBrowserFile> loadedFiles = new();
+    private long maxFileSize = 1024 * 15;
+    private int maxAllowedFiles = 3;
+    private bool isLoading;
+    private string fileInner = string.Empty;
+    private List<XmlDocument> loadedXml = new();
+    private int counter = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await purchaseItemService.GetPurchaseItems();
+    }
+
+    private string content = string.Empty;
+
+    async Task LoadFile(InputFileChangeEventArgs e)
+    {
+        LoadOptions loadOptions = LoadOptions.PreserveWhitespace;
+
+        var files = e.GetMultipleFiles(100);
+        content = string.Empty;
+
+        foreach (var file in files)
+        {
+
+            var stream = file.OpenReadStream();
+            string PO = file.Name.Replace("PO_", "").Replace(".xml", "");
+            var result = purchaseItemService.PurchaseItems.Find(r => r.PONumber == PO);
+            if (result == null)
+            {
+                //content += "<div>PO: " + PO + "</div>";
+                var doc = await XDocument.LoadAsync(stream, loadOptions, System.Threading.CancellationToken.None);
+                int counter = 0;
+
+                var items = from item in doc.Descendants("PurchaseOrder").Elements("purchaseItem")
+                            select new
+                            {
+                                po = PO,
+                                partNumber = item.Element("partNumber").Value,
+                                quantity = item.Element("quantity").Value,
+                                costPer = item.Element("costPer").Value,
+                                purchaser = item.Element("purchaser").Value,
+                                project = item.Element("project").Value
+                            };
+
+                foreach (var item in items)
+                {
+                    //Console.WriteLine($"{item.po} {item.partNumber}");
+                    content += "<div>po:" + item.po + "</div>"; //DB => PONumber
+                    content += "<div>partNumber:" + item.partNumber + "</div>"; //DB => partNumber
+                    content += "<div>quantity:" + item.quantity + "</div>"; //DB => quantity
+                    content += "<div>costPer:" + item.costPer + "</div>"; //DB => costPer
+                    content += "<div>purchaser:" + item.purchaser + "</div>"; //DB => purchaser
+                    content += "<div>project:" + item.project + "</div>"; //DB => project
+
+                    PurchaseRecord pr = new PurchaseRecord
+                        {
+                            PONumber = item.po,
+                            partNumber = item.partNumber,
+                            quantity = float.Parse(item.quantity),
+                            costPer = float.Parse(item.costPer),
+                            purchaser = item.purchaser,
+                            projet = item.project
+                        };
+
+                    purchaseItemService.PurchaseItems.Add(pr);
+                }
+            }
+            else
+            {
+                content += "<div<-------</div><div>" + PO + " has already been processed.</div>";
+            }
+        }
+        await purchaseItemService.CreatePurchaseRecords(purchaseItemService.PurchaseItems);
+    }
+}

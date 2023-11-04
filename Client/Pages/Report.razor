@@ -1,0 +1,203 @@
+﻿@page "/report"
+@inject NavigationManager navigationManager
+@inject IUserService userService
+@inject IPartService partService
+@inject IProjectService projectService
+@inject IPurchaseItemService purchaseItemService
+@inject IReportService reportService
+
+<style>
+    table, tr, td, th { border: 1px solid #000;}
+    td, th {padding: 2px;}
+</style>
+
+<h3>Report</h3>
+
+<div>
+    <h3>Projects</h3>
+    @if (projectService.Projects.Count == 0)
+    {
+        <p>Loading projects...</p>
+    }
+    else {
+        <div>
+            @foreach (var project in purchaseItemService.PurchaseItems.OrderBy(p => p.projet).Select(p => p.projet).Distinct())
+            {
+                <div>
+                    <h3>@(projectService.Projects.Find(p => p.projectNumber == project).projectDescription)</h3>
+                    <Tabs>
+                        <Tab Title="All" IsActive="true">
+                            <Content>
+                                <table>
+                                    @{
+                                        ResetTotal();
+                                    }
+                                    <tr>
+                                        <th>PO Number</th>
+                                        <th>User</th>
+                                        <th>Part Description</th>
+                                        <th class="text-center">Qty</th>
+                                        <th class="text-center">Cost/Per</th>
+                                        <th class="text-center">Subtotal</th>
+                                    </tr>
+                                    @foreach (var item in purchaseItemService.PurchaseItems.OrderBy(p => p.purchaser).Where(p => p.projet == project))
+                                    {
+                                        <tr>
+                                            <td>
+                                                @item.PONumber
+                                            </td>
+                                            <td>
+                                                @userService.Users.FirstOrDefault(u => u.userName == item.purchaser).fullName
+                                            </td>
+                                            <td>
+                                                @partService.Parts.FirstOrDefault(p => p.PartNumber == item.partNumber).Description
+                                            </td>
+                                            <td class="text-center">
+                                                @item.quantity
+                                            </td>
+                                            <td class="text-end">
+                                                @Math.Round(item.costPer,2).ToString("C")
+                                            </td>
+                                            <td class="text-end">
+                                                @*@(string.Format("${0:#.00}", Convert.ToDecimal(Math.Round(item.quantity * item.costPer, 2)))
+                                                 )*@
+                                                @(Convert.ToDecimal(Math.Round(item.quantity * item.costPer, 2)).ToString("C"))
+                                                @{
+                                                    AddToTotal(@Math.Round(item.quantity * item.costPer, 2));
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                    @{
+                                        AddToGrandTotal(jTotal);
+                                    }
+                                    <tr>
+                                        <td colspan="5" class="text-end"><h4>Total Costs </h4></td>
+                                        <td class="text-end"><h4>@(Convert.ToDecimal(Math.Round(jTotal, 2)).ToString("C"))</h4></td>
+                                    </tr>
+                                </table>
+                            </Content>
+                        </Tab>
+                        <Tab Title="Users">
+                            <Content>
+                                <table>
+                                    <tr>
+                                        <th>Full Name</th>
+                                        <th class="text-center">Subtotal</th>
+                                    </tr>
+                                    @*@foreach (var item in purchaseItemService.PurchaseItems.OrderBy(p => p.purchaser).Where(p => p.projet == project))*@
+                                    @foreach (var item in purchaseItemService.PurchaseItems.Where(p => p.projet == project)
+                                        .GroupBy(p => p.purchaser)
+                                        .Select(g => new { purchaser = g.Key, SUM = g.Sum(s => s.quantity * s.costPer) })
+                                        .OrderBy(p => p.purchaser))
+                                    {
+                                        <tr>
+                                            <td>
+                                                @userService.Users.FirstOrDefault(u => u.userName == item.purchaser).fullName
+                                            </td>
+                                            <td class="text-end">
+                                                @*@(string.Format("${0:#.00}", Convert.ToDecimal(Math.Round(item.quantity * item.costPer, 2))))*@
+                                                @(
+                                                    Convert.ToDecimal(Math.Round(item.SUM, 2)).ToString("C")
+                                                )
+                                                @*@{
+                                                    AddToTotal(@Math.Round(item.SUM, 2));
+                                                }*@
+                                            </td>
+                                        </tr>
+                                    }
+                                    <tr>
+                                        <td class="text-end"><h4>Total Costs </h4></td>
+                                        <td class="text-end"><h4>@(Convert.ToDecimal(Math.Round(jTotal, 2)).ToString("C"))</h4></td>
+                                    </tr>
+                                </table>
+                            </Content>
+                        </Tab>
+                        <Tab Title="Parts">
+                            <Content>
+                                <table>
+                                    <tr>
+                                        <th>Part</th>
+                                        <th class="text-center">Qty</th>
+                                        <th class="text-center">Subtotal</th>
+                                    </tr>
+                                    @*@foreach (var item in purchaseItemService.PurchaseItems.OrderBy(p => p.purchaser).Where(p => p.projet == project))*@
+                                    @foreach (var item in purchaseItemService.PurchaseItems.Where(p => p.projet == project)
+                                       .GroupBy(p => p.partNumber)
+                                       .Select(g => new { partNumber = g.Key, SUM1 = g.Sum(s => s.quantity), SUM2 = g.Sum(s => s.quantity * s.costPer) })
+                                       .OrderBy(p => p.partNumber))
+                                    {
+                                        <tr>
+                                            <td>
+                                                @partService.Parts.FirstOrDefault(p => p.PartNumber == item.partNumber).Description
+                                            </td>
+                                            <td class="text-center">
+                                                @*@(string.Format("${0:#.00}", Convert.ToDecimal(Math.Round(item.quantity * item.costPer, 2))))*@
+                                                @item.SUM1
+                                            </td>
+                                            <td class="text-end">
+                                                @*@(string.Format("${0:#.00}", Convert.ToDecimal(Math.Round(item.quantity * item.costPer, 2))))*@
+                                                @(Convert.ToDecimal(Math.Round(item.SUM2, 2)).ToString("C"))
+                                                @*@{ AddToTotal(@Math.Round(item.SUM2, 2));}*@
+                                            </td>
+                                        </tr>
+                                    }
+                                    <tr>
+                                        <td colspan="2" class="text-end"><h4>Total Costs </h4></td>
+                                        <td class="text-end"><h4>@(Convert.ToDecimal(Math.Round(jTotal, 2)).ToString("C"))</h4></td>
+                                    </tr>
+                                </table>
+                            </Content>
+                        </Tab>
+                    </Tabs>
+                </div>
+            }
+    </div>
+
+    <div class="text-end">
+        <h4>Grand Total: @(Convert.ToDecimal(Math.Round(jGrandTotal, 2)).ToString("C"))</h4>
+    </div>
+    }
+</div>
+@code {
+    IEnumerable<User> users = new List<User>();
+    IEnumerable<ProjectRecord> projects = new List<ProjectRecord>();
+    IEnumerable<MaterialMaster> parts = new List<MaterialMaster>();
+    IEnumerable<PurchaseRecord> purchaseItems = new List<PurchaseRecord>();
+    public double jGrandTotal { get; set; }
+    public double jGrandTotal2 { get; set; } //Testing
+    protected double jTotal = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await userService.GetUsers();
+        await partService.GetParts();
+        await projectService.GetProjects();
+        await purchaseItemService.GetPurchaseItems();
+
+        //await reportService.GetReport();
+
+        jGrandTotal = purchaseItemService.PurchaseItems.Sum(p => p.quantity * p.costPer);
+    }
+
+    protected void AddToTotal(double pAdd)
+    {
+        jTotal += pAdd;
+    }
+
+    protected void ResetTotal()
+    {
+        jTotal = 0;
+    }
+
+    protected string GetGrandTotal()
+    {
+        return Convert.ToDecimal(Math.Round(jGrandTotal, 2)).ToString("C");
+    }
+
+    protected void AddToGrandTotal(double pAdd)
+    {
+        jGrandTotal2 += pAdd;
+        Console.WriteLine(pAdd + " ~ " + jGrandTotal2);
+    }
+}
